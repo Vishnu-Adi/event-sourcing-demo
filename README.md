@@ -323,6 +323,22 @@ mvn clean compile
 mvn exec:java -Dexec.mainClass="com.example.eventsourcing.demo.EventSourcingDemo"
 ```
 
+This launches an interactive CLI with a dynamic menu so you can create accounts and perform transactions live:
+
+- `1` Create account
+- `2` List accounts (from projection)
+- `3` Deposit
+- `4` Withdraw
+- `5` Close account
+- `6` Show projections (balances, totals, counts)
+- `7` Transfer between accounts (uses a single transaction ID across both events)
+- `8` List all events
+- `9` Replay account from events
+- `10` Show event store stats
+- `11` Temporal query (events from last N seconds)
+- `12` View account transactions
+- `0` Exit
+
 ### Running the Benefits Demo
 
 ```bash
@@ -334,6 +350,8 @@ mvn exec:java -Dexec.mainClass="com.example.eventsourcing.demo.EventSourcingBene
 ```bash
 mvn test
 ```
+
+All tests should pass. The transaction history projection supports correlated transactions (like transfers) by grouping multiple records under the same transaction ID.
 
 ## Key Concepts Explained
 

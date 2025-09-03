@@ -11,43 +11,26 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Projection that maintains the current balance for all accounts.
- * 
- * This projection demonstrates how to build a simple read model from events.
- * It tracks the current balance of each account by processing account-related
- * events in the order they occurred.
- * 
- * Use cases:
- * - Quick balance lookups without replaying all events
- * - Account balance reports
- * - Balance validation for business operations
- * - Real-time balance updates for user interfaces
- */
 public class AccountBalanceProjection implements EventProjection {
     
     private final String projectionName;
     private final Map<String, AccountBalance> accountBalances;
     
-    /**
-     * Internal class to hold account balance information.
-     */
     public static class AccountBalance {
         private final String accountId;
         private final String accountHolderName;
         private final String accountType;
         private final BigDecimal balance;
-        private final String currency;
+        
         private final boolean isClosed;
         private final long lastEventVersion;
         
         public AccountBalance(String accountId, String accountHolderName, String accountType,
-                            BigDecimal balance, String currency, boolean isClosed, long lastEventVersion) {
+                            BigDecimal balance, boolean isClosed, long lastEventVersion) {
             this.accountId = accountId;
             this.accountHolderName = accountHolderName;
             this.accountType = accountType;
             this.balance = balance;
-            this.currency = currency;
             this.isClosed = isClosed;
             this.lastEventVersion = lastEventVersion;
         }
@@ -68,9 +51,6 @@ public class AccountBalanceProjection implements EventProjection {
             return balance;
         }
         
-        public String getCurrency() {
-            return currency;
-        }
         
         public boolean isClosed() {
             return isClosed;
@@ -82,16 +62,11 @@ public class AccountBalanceProjection implements EventProjection {
         
         @Override
         public String toString() {
-            return String.format("AccountBalance{id='%s', holder='%s', type='%s', balance=%s %s, closed=%s, version=%d}",
-                    accountId, accountHolderName, accountType, balance, currency, isClosed, lastEventVersion);
+        return String.format("AccountBalance{id='%s', holder='%s', type='%s', balance=%s, closed=%s, version=%d}",
+            accountId, accountHolderName, accountType, balance, isClosed, lastEventVersion);
         }
     }
     
-    /**
-     * Constructor for creating a new account balance projection.
-     * 
-     * @param projectionName The name of this projection
-     */
     public AccountBalanceProjection(String projectionName) {
         this.projectionName = projectionName;
         this.accountBalances = new ConcurrentHashMap<>();
@@ -118,21 +93,16 @@ public class AccountBalanceProjection implements EventProjection {
                 processAccountClosed((AccountClosed) event);
                 break;
             default:
-                // Ignore unknown events
                 break;
         }
     }
     
-    /**
-     * Processes an AccountOpened event.
-     */
     private void processAccountOpened(AccountOpened event) {
         AccountBalance balance = new AccountBalance(
             event.getAggregateId(),
             event.getAccountHolderName(),
             event.getAccountType(),
             event.getInitialBalance(),
-            event.getCurrency(),
             false,
             event.getAggregateVersion()
         );
@@ -140,9 +110,6 @@ public class AccountBalanceProjection implements EventProjection {
         accountBalances.put(event.getAggregateId(), balance);
     }
     
-    /**
-     * Processes a MoneyDeposited event.
-     */
     private void processMoneyDeposited(MoneyDeposited event) {
         AccountBalance currentBalance = accountBalances.get(event.getAggregateId());
         if (currentBalance != null) {
@@ -151,7 +118,6 @@ public class AccountBalanceProjection implements EventProjection {
                 currentBalance.getAccountHolderName(),
                 currentBalance.getAccountType(),
                 event.getNewBalance(),
-                currentBalance.getCurrency(),
                 currentBalance.isClosed(),
                 event.getAggregateVersion()
             );
@@ -160,9 +126,6 @@ public class AccountBalanceProjection implements EventProjection {
         }
     }
     
-    /**
-     * Processes a MoneyWithdrawn event.
-     */
     private void processMoneyWithdrawn(MoneyWithdrawn event) {
         AccountBalance currentBalance = accountBalances.get(event.getAggregateId());
         if (currentBalance != null) {
@@ -171,7 +134,6 @@ public class AccountBalanceProjection implements EventProjection {
                 currentBalance.getAccountHolderName(),
                 currentBalance.getAccountType(),
                 event.getNewBalance(),
-                currentBalance.getCurrency(),
                 currentBalance.isClosed(),
                 event.getAggregateVersion()
             );
@@ -180,9 +142,6 @@ public class AccountBalanceProjection implements EventProjection {
         }
     }
     
-    /**
-     * Processes an AccountClosed event.
-     */
     private void processAccountClosed(AccountClosed event) {
         AccountBalance currentBalance = accountBalances.get(event.getAggregateId());
         if (currentBalance != null) {
@@ -191,7 +150,6 @@ public class AccountBalanceProjection implements EventProjection {
                 currentBalance.getAccountHolderName(),
                 currentBalance.getAccountType(),
                 event.getFinalBalance(),
-                currentBalance.getCurrency(),
                 true,
                 event.getAggregateVersion()
             );
@@ -210,31 +168,14 @@ public class AccountBalanceProjection implements EventProjection {
         return new HashMap<>(accountBalances);
     }
     
-    /**
-     * Gets the current balance for a specific account.
-     * 
-     * @param accountId The ID of the account
-     * @return The current balance, or null if the account doesn't exist
-     */
     public AccountBalance getAccountBalance(String accountId) {
         return accountBalances.get(accountId);
     }
     
-    /**
-     * Gets all account balances.
-     * 
-     * @return A map of account ID to account balance
-     */
     public Map<String, AccountBalance> getAllAccountBalances() {
         return new HashMap<>(accountBalances);
     }
     
-    /**
-     * Gets the total balance across all accounts of a specific type.
-     * 
-     * @param accountType The type of account to sum
-     * @return The total balance for the specified account type
-     */
     public BigDecimal getTotalBalanceByType(String accountType) {
         return accountBalances.values().stream()
             .filter(balance -> accountType.equals(balance.getAccountType()) && !balance.isClosed())
@@ -242,11 +183,6 @@ public class AccountBalanceProjection implements EventProjection {
             .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
     
-    /**
-     * Gets the total balance across all accounts.
-     * 
-     * @return The total balance across all open accounts
-     */
     public BigDecimal getTotalBalance() {
         return accountBalances.values().stream()
             .filter(balance -> !balance.isClosed())
@@ -254,11 +190,6 @@ public class AccountBalanceProjection implements EventProjection {
             .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
     
-    /**
-     * Gets the number of accounts by type.
-     * 
-     * @return A map of account type to count
-     */
     public Map<String, Long> getAccountCountByType() {
         Map<String, Long> counts = new HashMap<>();
         for (AccountBalance balance : accountBalances.values()) {
@@ -271,7 +202,6 @@ public class AccountBalanceProjection implements EventProjection {
     
     @Override
     public boolean isValid() {
-        // Basic validation: all balances should be non-negative
         return accountBalances.values().stream()
             .allMatch(balance -> balance.getBalance().compareTo(BigDecimal.ZERO) >= 0);
     }

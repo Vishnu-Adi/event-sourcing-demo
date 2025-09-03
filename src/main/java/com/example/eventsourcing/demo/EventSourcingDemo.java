@@ -13,73 +13,46 @@ import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
-/**
- * Comprehensive demonstration of Event Sourcing principles and implementation.
- * 
- * This demo showcases:
- * 1. Creating and managing bank accounts using Event Sourcing
- * 2. Performing transactions (deposits and withdrawals)
- * 3. Building and querying projections
- * 4. Event replay and state reconstruction
- * 5. Concurrency control and optimistic locking
- * 6. Event store statistics and monitoring
- * 
- * The demo is designed to be educational and shows the key benefits
- * of Event Sourcing: audit trails, temporal queries, and flexible read models.
- */
 public class EventSourcingDemo {
     
     private final EventStore eventStore;
     private final AccountBalanceProjection balanceProjection;
     private final TransactionHistoryProjection transactionProjection;
     
-    /**
-     * Constructor for creating a new Event Sourcing demo.
-     */
     public EventSourcingDemo() {
         this.eventStore = new InMemoryEventStore();
         this.balanceProjection = new AccountBalanceProjection("AccountBalanceProjection");
         this.transactionProjection = new TransactionHistoryProjection("TransactionHistoryProjection");
     }
     
-    /**
-     * Runs the complete Event Sourcing demonstration.
-     */
     public void runDemo() {
         System.out.println("=== Event Sourcing Demo ===\n");
         
         try {
-            // Step 1: Create accounts
             System.out.println("Step 1: Creating Bank Accounts");
             System.out.println("==============================");
             createAccounts();
             
-            // Step 2: Perform transactions
             System.out.println("\nStep 2: Performing Transactions");
             System.out.println("===============================");
             performTransactions();
             
-            // Step 3: Demonstrate projections
             System.out.println("\nStep 3: Building and Querying Projections");
             System.out.println("=========================================");
             demonstrateProjections();
             
-            // Step 4: Show event replay
             System.out.println("\nStep 4: Event Replay and State Reconstruction");
             System.out.println("=============================================");
             demonstrateEventReplay();
             
-            // Step 5: Show concurrency control
             System.out.println("\nStep 5: Concurrency Control");
             System.out.println("===========================");
             demonstrateConcurrencyControl();
             
-            // Step 6: Show event store statistics
             System.out.println("\nStep 6: Event Store Statistics");
             System.out.println("==============================");
             showEventStoreStatistics();
             
-            // Step 7: Show temporal queries
             System.out.println("\nStep 7: Temporal Queries");
             System.out.println("========================");
             demonstrateTemporalQueries();
@@ -89,54 +62,298 @@ public class EventSourcingDemo {
             e.printStackTrace();
         }
     }
+
+    public void runInteractive() {
+        System.out.println("=== Event Sourcing Demo (Interactive) ===\n");
+        try (Scanner scanner = new Scanner(System.in)) {
+            boolean running = true;
+            while (running) {
+                System.out.println();
+                System.out.println("Choose an option:");
+                System.out.println("1) Create account");
+                System.out.println("2) List accounts");
+                System.out.println("3) Deposit");
+                System.out.println("4) Withdraw");
+                System.out.println("5) Close account");
+                System.out.println("6) Show projections");
+                System.out.println("7) Transfer between accounts");
+                System.out.println("8) List all events");
+                System.out.println("9) Replay account from events");
+                System.out.println("10) Show event store stats");
+                System.out.println("11) Temporal query (events from last N seconds)");
+                System.out.println("12) View account transactions");
+                System.out.println("0) Exit");
+                System.out.print("> ");
+
+                String choice = scanner.nextLine().trim();
+                try {
+                    switch (choice) {
+                        case "1":
+                            interactiveCreateAccount(scanner);
+                            promptContinue(scanner);
+                            break;
+                        case "2":
+                            interactiveListAccounts();
+                            promptContinue(scanner);
+                            break;
+                        case "3":
+                            interactiveDeposit(scanner);
+                            promptContinue(scanner);
+                            break;
+                        case "4":
+                            interactiveWithdraw(scanner);
+                            promptContinue(scanner);
+                            break;
+                        case "5":
+                            interactiveCloseAccount(scanner);
+                            promptContinue(scanner);
+                            break;
+                        case "6":
+                            demonstrateProjections();
+                            promptContinue(scanner);
+                            break;
+                        case "7":
+                            interactiveTransfer(scanner);
+                            promptContinue(scanner);
+                            break;
+                        case "8":
+                            interactiveListAllEvents();
+                            promptContinue(scanner);
+                            break;
+                        case "9":
+                            interactiveReplayAccount(scanner);
+                            promptContinue(scanner);
+                            break;
+                        case "10":
+                            showEventStoreStatistics();
+                            promptContinue(scanner);
+                            break;
+                        case "11":
+                            interactiveTemporalQuery(scanner);
+                            promptContinue(scanner);
+                            break;
+                        case "12":
+                            interactiveViewTransactions(scanner);
+                            promptContinue(scanner);
+                            break;
+                        case "0":
+                            running = false;
+                            break;
+                        default:
+                            System.out.println("Invalid option");
+                    }
+                } catch (Exception e) {
+                    System.out.println("Operation failed: " + e.getMessage());
+                }
+            }
+        }
+    }
+
+    private void interactiveCreateAccount(Scanner scanner) throws Exception {
+        System.out.print("Account holder name: ");
+        String name = scanner.nextLine().trim();
+        System.out.print("Account type (CHECKING/SAVINGS): ");
+        String type = scanner.nextLine().trim().toUpperCase(Locale.ROOT);
+        System.out.print("Initial balance: ");
+        BigDecimal initial = new BigDecimal(scanner.nextLine().trim());
+        BankAccount account = new BankAccount(name, type, initial);
+        saveAccount(account);
+        updateProjections();
+        System.out.println("Created account: " + account.getId());
+    }
+
+    private void interactiveListAccounts() throws Exception {
+        // Prefer projection for quick summary
+        updateProjections();
+        Map<String, AccountBalanceProjection.AccountBalance> all = balanceProjection.getAllAccountBalances();
+        if (all.isEmpty()) {
+            System.out.println("No accounts found");
+            return;
+        }
+        all.values().forEach(b -> System.out.println(b));
+    }
+
+    private void interactiveTransfer(Scanner scanner) throws Exception {
+        System.out.print("From Account ID: ");
+        String fromId = scanner.nextLine().trim();
+        System.out.print("To Account ID: ");
+        String toId = scanner.nextLine().trim();
+        System.out.print("Amount: ");
+        BigDecimal amount = new BigDecimal(scanner.nextLine().trim());
+        System.out.print("Description: ");
+        String desc = scanner.nextLine().trim();
+        System.out.print("Performed by: ");
+        String by = scanner.nextLine().trim();
+
+        if (fromId.equals(toId)) {
+            System.out.println("Cannot transfer to the same account");
+            return;
+        }
+
+        BankAccount from = loadAccount(fromId);
+        BankAccount to = loadAccount(toId);
+
+        // Single currency system (INR), no currency check required
+
+        // Use a single transaction id for correlation across withdraw and deposit
+        String txId = UUID.randomUUID().toString();
+        try {
+            from.withdraw(amount, "Transfer out: " + desc, by, txId);
+            to.deposit(amount, "Transfer in: " + desc, by, txId);
+            // Save both; if second save fails due to concurrency, caller can retry from latest events
+            saveAccount(from);
+            saveAccount(to);
+            updateProjections();
+            System.out.println("Transfer completed. Transaction ID: " + txId);
+        } catch (InsufficientFundsException e) {
+            System.out.println("Failed: " + e.getMessage());
+        }
+    }
+
+    private void interactiveDeposit(Scanner scanner) throws Exception {
+        System.out.print("Account ID: ");
+        String accountId = scanner.nextLine().trim();
+        BankAccount account = loadAccount(accountId);
+        System.out.print("Amount: ");
+        BigDecimal amount = new BigDecimal(scanner.nextLine().trim());
+        System.out.print("Description: ");
+        String desc = scanner.nextLine().trim();
+        System.out.print("Deposited by: ");
+        String by = scanner.nextLine().trim();
+        String txId = account.deposit(amount, desc, by);
+        saveAccount(account);
+        updateProjections();
+        System.out.println("Deposit recorded. Transaction ID: " + txId);
+    }
+
+    private void interactiveWithdraw(Scanner scanner) throws Exception {
+        System.out.print("Account ID: ");
+        String accountId = scanner.nextLine().trim();
+        BankAccount account = loadAccount(accountId);
+        System.out.print("Amount: ");
+        BigDecimal amount = new BigDecimal(scanner.nextLine().trim());
+        System.out.print("Description: ");
+        String desc = scanner.nextLine().trim();
+        System.out.print("Withdrawn by: ");
+        String by = scanner.nextLine().trim();
+        try {
+            String txId = account.withdraw(amount, desc, by);
+            saveAccount(account);
+            updateProjections();
+            System.out.println("Withdrawal recorded. Transaction ID: " + txId);
+        } catch (InsufficientFundsException e) {
+            System.out.println("Failed: " + e.getMessage());
+        }
+    }
+
+    private void interactiveCloseAccount(Scanner scanner) throws Exception {
+        System.out.print("Account ID: ");
+        String accountId = scanner.nextLine().trim();
+        BankAccount account = loadAccount(accountId);
+        System.out.print("Reason: ");
+        String reason = scanner.nextLine().trim();
+        System.out.print("Closed by: ");
+        String by = scanner.nextLine().trim();
+        System.out.print("Transfer remaining funds to account ID (optional, blank to skip): ");
+        String transferTo = scanner.nextLine().trim();
+        if (transferTo.isEmpty()) transferTo = null;
+        account.close(reason, by, transferTo);
+        saveAccount(account);
+        updateProjections();
+        System.out.println("Account closed");
+    }
+
+    private void interactiveListAllEvents() throws Exception {
+        List<DomainEvent> all = eventStore.getAllEvents().get();
+        if (all.isEmpty()) {
+            System.out.println("No events recorded");
+            return;
+        }
+        for (int i = 0; i < all.size(); i++) {
+            System.out.println((i + 1) + ". " + all.get(i));
+        }
+    }
+
+    private void interactiveReplayAccount(Scanner scanner) throws Exception {
+        System.out.print("Account ID: ");
+        String accountId = scanner.nextLine().trim();
+        List<DomainEvent> accountEvents = eventStore.getEvents(accountId).get();
+        if (accountEvents.isEmpty()) {
+            System.out.println("No events for account");
+            return;
+        }
+        BankAccount reconstructed = new BankAccount(accountId, accountEvents);
+        System.out.println("Reconstructed: " + reconstructed);
+    }
+
+    private void interactiveTemporalQuery(Scanner scanner) throws Exception {
+        System.out.print("Last N seconds: ");
+        String s = scanner.nextLine().trim();
+        long seconds = Long.parseLong(s);
+        Instant from = Instant.now().minusSeconds(seconds);
+        List<DomainEvent> events = eventStore.getEventsFromTime(from).get();
+        System.out.println("Events found: " + events.size());
+        for (DomainEvent e : events) {
+            System.out.println(e.getOccurredAt() + " - " + e.getEventType() + " - " + e.getAggregateId());
+        }
+    }
+
+    private void promptContinue(Scanner scanner) {
+        System.out.print("Continue? (y/n): ");
+        String ans = scanner.nextLine().trim().toLowerCase(Locale.ROOT);
+        if (!ans.equals("y") && !ans.equals("yes")) {
+            // Exit by throwing a runtime to unwind to main and stop loop
+            throw new RuntimeException("exit-interactive");
+        }
+    }
+
+    private void interactiveViewTransactions(Scanner scanner) throws Exception {
+        System.out.print("Account ID: ");
+        String accountId = scanner.nextLine().trim();
+        updateProjections();
+        List<TransactionHistoryProjection.TransactionRecord> txs = transactionProjection.getTransactionsForAccount(accountId);
+        if (txs.isEmpty()) {
+            System.out.println("No transactions found for this account");
+            return;
+        }
+        System.out.println("Transactions for account " + accountId + ":");
+        for (TransactionHistoryProjection.TransactionRecord t : txs) {
+            System.out.println("  " + t);
+        }
+    }
     
-    /**
-     * Creates several bank accounts to demonstrate account creation.
-     */
     private void createAccounts() throws Exception {
-        // Create account for John Doe
         BankAccount johnAccount = new BankAccount(
             "John Doe", 
             "CHECKING", 
-            new BigDecimal("1000.00"), 
-            "USD"
+            new BigDecimal("1000.00")
         );
         
-        // Save the account to the event store
         saveAccount(johnAccount);
         System.out.println("Created account for John Doe: " + johnAccount);
         
-        // Create account for Jane Smith
         BankAccount janeAccount = new BankAccount(
             "Jane Smith", 
             "SAVINGS", 
-            new BigDecimal("5000.00"), 
-            "USD"
+            new BigDecimal("5000.00")
         );
         
         saveAccount(janeAccount);
         System.out.println("Created account for Jane Smith: " + janeAccount);
         
-        // Create account for Bob Johnson
         BankAccount bobAccount = new BankAccount(
             "Bob Johnson", 
             "CHECKING", 
-            new BigDecimal("2500.00"), 
-            "USD"
+            new BigDecimal("2500.00")
         );
         
         saveAccount(bobAccount);
         System.out.println("Created account for Bob Johnson: " + bobAccount);
         
-        // Update projections with the new events
         updateProjections();
     }
     
-    /**
-     * Performs various transactions to demonstrate event generation.
-     */
     private void performTransactions() throws Exception {
-        // Get all accounts
         List<BankAccount> accounts = loadAllAccounts();
         
         if (accounts.isEmpty()) {
@@ -148,25 +365,22 @@ public class EventSourcingDemo {
         BankAccount janeAccount = accounts.get(1);
         BankAccount bobAccount = accounts.get(2);
         
-        // John deposits money
         String depositId1 = johnAccount.deposit(
             new BigDecimal("500.00"), 
             "Salary deposit", 
             "John Doe"
         );
         saveAccount(johnAccount);
-        System.out.println("John deposited $500.00 (Transaction ID: " + depositId1 + ")");
+    System.out.println("John deposited INR 500.00 (Transaction ID: " + depositId1 + ")");
         
-        // Jane withdraws money
         String withdrawalId1 = janeAccount.withdraw(
             new BigDecimal("1000.00"), 
             "Vacation fund", 
             "Jane Smith"
         );
         saveAccount(janeAccount);
-        System.out.println("Jane withdrew $1000.00 (Transaction ID: " + withdrawalId1 + ")");
+    System.out.println("Jane withdrew INR 1000.00 (Transaction ID: " + withdrawalId1 + ")");
         
-        // Bob transfers money (deposit to John, withdraw from Bob)
         String withdrawalId2 = bobAccount.withdraw(
             new BigDecimal("200.00"), 
             "Transfer to John", 
@@ -180,9 +394,8 @@ public class EventSourcingDemo {
             "Bob Johnson"
         );
         saveAccount(johnAccount);
-        System.out.println("Bob transferred $200.00 to John");
+    System.out.println("Bob transferred INR 200.00 to John");
         
-        // Try to withdraw more than available (should fail)
         try {
             johnAccount.withdraw(
                 new BigDecimal("2000.00"), 
@@ -191,28 +404,23 @@ public class EventSourcingDemo {
             );
             saveAccount(johnAccount);
         } catch (InsufficientFundsException e) {
-            System.out.println("Failed to withdraw $2000.00 from John's account: " + e.getMessage());
+            System.out.println("Failed to withdraw INR 2000.00 from John's account: " + e.getMessage());
         }
         
-        // Update projections
         updateProjections();
     }
     
-    /**
-     * Demonstrates how projections work and how to query them.
-     */
     private void demonstrateProjections() throws Exception {
         System.out.println("Account Balance Projection:");
         System.out.println("--------------------------");
         
-        // Show all account balances
         balanceProjection.getAllAccountBalances().forEach((accountId, balance) -> {
             System.out.println("  " + balance);
         });
         
-        System.out.println("\nTotal balance across all accounts: $" + balanceProjection.getTotalBalance());
-        System.out.println("Total checking accounts balance: $" + balanceProjection.getTotalBalanceByType("CHECKING"));
-        System.out.println("Total savings accounts balance: $" + balanceProjection.getTotalBalanceByType("SAVINGS"));
+    System.out.println("\nTotal balance across all accounts: INR " + balanceProjection.getTotalBalance());
+    System.out.println("Total checking accounts balance: INR " + balanceProjection.getTotalBalanceByType("CHECKING"));
+    System.out.println("Total savings accounts balance: INR " + balanceProjection.getTotalBalanceByType("SAVINGS"));
         
         System.out.println("\nAccount count by type:");
         balanceProjection.getAccountCountByType().forEach((type, count) -> {
@@ -222,15 +430,12 @@ public class EventSourcingDemo {
         System.out.println("\nTransaction History Projection:");
         System.out.println("-------------------------------");
         
-        // Show transaction counts
         System.out.println("Total transactions: " + transactionProjection.getTotalTransactionCount());
         
-        // Show transactions by type
         System.out.println("Deposits: " + transactionProjection.getTransactionsByType("DEPOSIT").size());
         System.out.println("Withdrawals: " + transactionProjection.getTransactionsByType("WITHDRAWAL").size());
         System.out.println("Account openings: " + transactionProjection.getTransactionsByType("ACCOUNT_OPENED").size());
         
-        // Show recent transactions for first account
         List<BankAccount> accounts = loadAllAccounts();
         if (!accounts.isEmpty()) {
             String accountId = accounts.get(0).getId();
@@ -244,24 +449,18 @@ public class EventSourcingDemo {
         }
     }
     
-    /**
-     * Demonstrates event replay and state reconstruction.
-     */
     private void demonstrateEventReplay() throws Exception {
         System.out.println("Demonstrating Event Replay:");
         System.out.println("---------------------------");
         
-        // Get all events from the event store
         List<DomainEvent> allEvents = eventStore.getAllEvents().get();
         System.out.println("Total events in store: " + allEvents.size());
         
-        // Show events in chronological order
         System.out.println("\nEvents in chronological order:");
         allEvents.forEach(event -> {
             System.out.println("  " + event);
         });
         
-        // Reconstruct an account from events
         List<BankAccount> accounts = loadAllAccounts();
         if (!accounts.isEmpty()) {
             String accountId = accounts.get(0).getId();
@@ -270,15 +469,11 @@ public class EventSourcingDemo {
             System.out.println("\nReconstructing account " + accountId + " from events:");
             System.out.println("Events for this account: " + accountEvents.size());
             
-            // Create a new account instance by replaying events
             BankAccount reconstructedAccount = new BankAccount(accountId, accountEvents);
             System.out.println("Reconstructed account: " + reconstructedAccount);
         }
     }
     
-    /**
-     * Demonstrates concurrency control and optimistic locking.
-     */
     private void demonstrateConcurrencyControl() throws Exception {
         System.out.println("Demonstrating Concurrency Control:");
         System.out.println("----------------------------------");
@@ -292,34 +487,26 @@ public class EventSourcingDemo {
         BankAccount account = accounts.get(0);
         String accountId = account.getId();
         
-        // Load the account again to simulate concurrent access
         List<DomainEvent> events = eventStore.getEvents(accountId).get();
         BankAccount concurrentAccount = new BankAccount(accountId, events);
         
-        // Perform operations on both instances
         account.deposit(new BigDecimal("100.00"), "Deposit 1", "User 1");
         concurrentAccount.deposit(new BigDecimal("200.00"), "Deposit 2", "User 2");
         
-        // Save the first account
         saveAccount(account);
-        System.out.println("Saved first account with deposit of $100.00");
+    System.out.println("Saved first account with deposit of INR 100.00");
         
-        // Try to save the second account (should fail due to concurrency conflict)
         try {
             saveAccount(concurrentAccount);
-            System.out.println("Saved second account with deposit of $200.00");
+            System.out.println("Saved second account with deposit of INR 200.00");
         } catch (Exception e) {
             System.out.println("Failed to save second account due to concurrency conflict: " + e.getMessage());
         }
         
-        // Show final state
         BankAccount finalAccount = loadAccount(accountId);
         System.out.println("Final account state: " + finalAccount);
     }
     
-    /**
-     * Shows event store statistics and monitoring information.
-     */
     private void showEventStoreStatistics() throws Exception {
         System.out.println("Event Store Statistics:");
         System.out.println("----------------------");
@@ -335,14 +522,10 @@ public class EventSourcingDemo {
         });
     }
     
-    /**
-     * Demonstrates temporal queries and event filtering.
-     */
     private void demonstrateTemporalQueries() throws Exception {
         System.out.println("Demonstrating Temporal Queries:");
         System.out.println("-------------------------------");
         
-        // Get events from the last hour
         Instant oneHourAgo = Instant.now().minusSeconds(3600);
         List<DomainEvent> recentEvents = eventStore.getEventsFromTime(oneHourAgo).get();
         
@@ -351,11 +534,10 @@ public class EventSourcingDemo {
             System.out.println("  " + event.getEventType() + " at " + event.getOccurredAt());
         });
         
-        // Show transaction history for a specific time range
         List<BankAccount> accounts = loadAllAccounts();
         if (!accounts.isEmpty()) {
             String accountId = accounts.get(0).getId();
-            Instant startTime = Instant.now().minusSeconds(7200); // 2 hours ago
+            Instant startTime = Instant.now().minusSeconds(7200);
             Instant endTime = Instant.now();
             
             List<TransactionHistoryProjection.TransactionRecord> transactions = 
@@ -368,14 +550,10 @@ public class EventSourcingDemo {
         }
     }
     
-    /**
-     * Saves an account to the event store.
-     */
     private void saveAccount(BankAccount account) throws Exception {
         List<DomainEvent> uncommittedEvents = account.getUncommittedEvents();
         if (!uncommittedEvents.isEmpty()) {
             long expectedVersion = account.getVersion() - uncommittedEvents.size();
-            // For new accounts, expected version should be -1 (aggregate doesn't exist)
             if (expectedVersion == 0) {
                 expectedVersion = -1;
             }
@@ -384,9 +562,6 @@ public class EventSourcingDemo {
         }
     }
     
-    /**
-     * Loads an account from the event store.
-     */
     private BankAccount loadAccount(String accountId) throws Exception {
         List<DomainEvent> events = eventStore.getEvents(accountId).get();
         if (events.isEmpty()) {
@@ -395,19 +570,14 @@ public class EventSourcingDemo {
         return new BankAccount(accountId, events);
     }
     
-    /**
-     * Loads all accounts from the event store.
-     */
     private List<BankAccount> loadAllAccounts() throws Exception {
         List<DomainEvent> allEvents = eventStore.getAllEvents().get();
         
-        // Group events by aggregate ID
         Map<String, List<DomainEvent>> eventsByAccount = new HashMap<>();
         for (DomainEvent event : allEvents) {
             eventsByAccount.computeIfAbsent(event.getAggregateId(), k -> new ArrayList<>()).add(event);
         }
         
-        // Create account instances
         List<BankAccount> accounts = new ArrayList<>();
         for (Map.Entry<String, List<DomainEvent>> entry : eventsByAccount.entrySet()) {
             accounts.add(new BankAccount(entry.getKey(), entry.getValue()));
@@ -416,28 +586,20 @@ public class EventSourcingDemo {
         return accounts;
     }
     
-    /**
-     * Updates all projections with the latest events.
-     */
     private void updateProjections() throws Exception {
         List<DomainEvent> allEvents = eventStore.getAllEvents().get();
         
-        // Reset projections
         balanceProjection.reset();
         transactionProjection.reset();
         
-        // Replay all events
         for (DomainEvent event : allEvents) {
             balanceProjection.processEvent(event);
             transactionProjection.processEvent(event);
         }
     }
     
-    /**
-     * Main method to run the demo.
-     */
     public static void main(String[] args) {
         EventSourcingDemo demo = new EventSourcingDemo();
-        demo.runDemo();
+        demo.runInteractive();
     }
 }

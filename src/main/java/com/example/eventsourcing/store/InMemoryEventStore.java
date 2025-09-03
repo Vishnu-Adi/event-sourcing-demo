@@ -12,41 +12,13 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Collectors;
 
-/**
- * In-memory implementation of the EventStore interface.
- * 
- * This implementation stores all events in memory using concurrent data structures
- * to ensure thread safety. It's perfect for demonstrations, testing, and
- * scenarios where persistence is not required.
- * 
- * Key features:
- * - Thread-safe operations using concurrent data structures
- * - Optimistic concurrency control
- * - Event ordering and versioning
- * - Support for event replay and projections
- * - Comprehensive querying capabilities
- * 
- * Note: This implementation is not persistent - all data is lost when the
- * application shuts down. For production use, consider implementing a
- * persistent event store using a database.
- */
 public class InMemoryEventStore implements EventStore {
     
-    // Thread-safe storage for events by aggregate ID
     private final Map<String, List<StoredEvent>> eventsByAggregate;
-    
-    // Thread-safe storage for all events (for global queries)
     private final List<StoredEvent> allEvents;
-    
-    // Read-write locks for each aggregate to ensure thread safety
     private final Map<String, ReadWriteLock> aggregateLocks;
-    
-    // Global lock for operations that affect all events
     private final ReadWriteLock globalLock;
     
-    /**
-     * Internal class to store events with additional metadata.
-     */
     private static class StoredEvent {
         private final DomainEvent event;
         private final long globalSequenceNumber;
@@ -71,9 +43,6 @@ public class InMemoryEventStore implements EventStore {
         }
     }
     
-    /**
-     * Constructor for creating a new in-memory event store.
-     */
     public InMemoryEventStore() {
         this.eventsByAggregate = new ConcurrentHashMap<>();
         this.allEvents = Collections.synchronizedList(new ArrayList<>());
@@ -88,7 +57,6 @@ public class InMemoryEventStore implements EventStore {
                 throw new IllegalArgumentException("Events list cannot be null or empty");
             }
             
-            // Validate all events belong to the same aggregate
             for (DomainEvent event : events) {
                 if (!aggregateId.equals(event.getAggregateId())) {
                     throw new IllegalArgumentException(
@@ -97,20 +65,17 @@ public class InMemoryEventStore implements EventStore {
                 }
             }
             
-            // Get or create lock for this aggregate
             ReadWriteLock aggregateLock = aggregateLocks.computeIfAbsent(aggregateId, 
                 k -> new ReentrantReadWriteLock());
             
             aggregateLock.writeLock().lock();
             try {
-                // Check current version for optimistic concurrency control
                 long currentVersion = getCurrentVersionInternal(aggregateId);
                 
                 if (currentVersion != expectedVersion) {
                     throw new ConcurrencyException(aggregateId, expectedVersion, currentVersion);
                 }
                 
-                // Validate event versions are sequential
                 long nextVersion = currentVersion == -1 ? 1 : currentVersion + 1;
                 for (DomainEvent event : events) {
                     if (event.getAggregateVersion() != nextVersion) {
@@ -121,7 +86,6 @@ public class InMemoryEventStore implements EventStore {
                     nextVersion++;
                 }
                 
-                // Store events
                 List<StoredEvent> aggregateEvents = eventsByAggregate.computeIfAbsent(aggregateId, 
                     k -> Collections.synchronizedList(new ArrayList<>()));
                 
@@ -228,14 +192,14 @@ public class InMemoryEventStore implements EventStore {
     private long getCurrentVersionInternal(String aggregateId) {
         ReadWriteLock aggregateLock = aggregateLocks.get(aggregateId);
         if (aggregateLock == null) {
-            return -1; // Aggregate doesn't exist
+            return -1;
         }
         
         aggregateLock.readLock().lock();
         try {
             List<StoredEvent> storedEvents = eventsByAggregate.get(aggregateId);
             if (storedEvents == null || storedEvents.isEmpty()) {
-                return -1; // Aggregate doesn't exist
+                return -1;
             }
             
             return storedEvents.get(storedEvents.size() - 1).getEvent().getAggregateVersion();
@@ -291,10 +255,6 @@ public class InMemoryEventStore implements EventStore {
         });
     }
     
-    /**
-     * Gets statistics about the event store.
-     * Useful for monitoring and debugging.
-     */
     public CompletableFuture<EventStoreStats> getStats() {
         return CompletableFuture.supplyAsync(() -> {
             globalLock.readLock().lock();
@@ -315,9 +275,6 @@ public class InMemoryEventStore implements EventStore {
         });
     }
     
-    /**
-     * Statistics about the event store.
-     */
     public static class EventStoreStats {
         private final int totalEvents;
         private final int totalAggregates;

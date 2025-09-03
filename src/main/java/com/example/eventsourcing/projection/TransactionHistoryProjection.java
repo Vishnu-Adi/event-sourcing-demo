@@ -12,30 +12,13 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-/**
- * Projection that maintains a complete transaction history for all accounts.
- * 
- * This projection demonstrates how to build a more complex read model from events.
- * It tracks all transactions (deposits, withdrawals, account openings, closures)
- * and provides various query capabilities for transaction history.
- * 
- * Use cases:
- * - Transaction history reports
- * - Audit trails
- * - Transaction analysis and reporting
- * - Compliance and regulatory reporting
- * - Customer transaction statements
- */
 public class TransactionHistoryProjection implements EventProjection {
     
     private final String projectionName;
     private final Map<String, List<TransactionRecord>> transactionsByAccount;
-    private final Map<String, TransactionRecord> transactionsById;
+    private final Map<String, List<TransactionRecord>> transactionsById;
     private final List<TransactionRecord> allTransactions;
     
-    /**
-     * Internal class to represent a transaction record.
-     */
     public static class TransactionRecord {
         private final String transactionId;
         private final String accountId;
@@ -104,15 +87,10 @@ public class TransactionHistoryProjection implements EventProjection {
         }
     }
     
-    /**
-     * Constructor for creating a new transaction history projection.
-     * 
-     * @param projectionName The name of this projection
-     */
     public TransactionHistoryProjection(String projectionName) {
         this.projectionName = projectionName;
         this.transactionsByAccount = new ConcurrentHashMap<>();
-        this.transactionsById = new ConcurrentHashMap<>();
+    this.transactionsById = new ConcurrentHashMap<>();
         this.allTransactions = Collections.synchronizedList(new ArrayList<>());
     }
     
@@ -137,14 +115,10 @@ public class TransactionHistoryProjection implements EventProjection {
                 processAccountClosed((AccountClosed) event);
                 break;
             default:
-                // Ignore unknown events
                 break;
         }
     }
     
-    /**
-     * Processes an AccountOpened event.
-     */
     private void processAccountOpened(AccountOpened event) {
         TransactionRecord record = new TransactionRecord(
             "ACCOUNT_OPENED_" + event.getAggregateId(),
@@ -161,9 +135,6 @@ public class TransactionHistoryProjection implements EventProjection {
         addTransaction(record);
     }
     
-    /**
-     * Processes a MoneyDeposited event.
-     */
     private void processMoneyDeposited(MoneyDeposited event) {
         TransactionRecord record = new TransactionRecord(
             event.getTransactionId(),
@@ -180,9 +151,6 @@ public class TransactionHistoryProjection implements EventProjection {
         addTransaction(record);
     }
     
-    /**
-     * Processes a MoneyWithdrawn event.
-     */
     private void processMoneyWithdrawn(MoneyWithdrawn event) {
         TransactionRecord record = new TransactionRecord(
             event.getTransactionId(),
@@ -199,9 +167,6 @@ public class TransactionHistoryProjection implements EventProjection {
         addTransaction(record);
     }
     
-    /**
-     * Processes an AccountClosed event.
-     */
     private void processAccountClosed(AccountClosed event) {
         TransactionRecord record = new TransactionRecord(
             "ACCOUNT_CLOSED_" + event.getAggregateId(),
@@ -218,25 +183,20 @@ public class TransactionHistoryProjection implements EventProjection {
         addTransaction(record);
     }
     
-    /**
-     * Adds a transaction record to the projection.
-     */
     private void addTransaction(TransactionRecord record) {
-        // Add to account-specific list
         transactionsByAccount.computeIfAbsent(record.getAccountId(), k -> Collections.synchronizedList(new ArrayList<>()))
             .add(record);
         
-        // Add to global transaction map
-        transactionsById.put(record.getTransactionId(), record);
+        transactionsById.computeIfAbsent(record.getTransactionId(), k -> Collections.synchronizedList(new ArrayList<>()))
+            .add(record);
         
-        // Add to global list
         allTransactions.add(record);
     }
     
     @Override
     public void reset() {
         transactionsByAccount.clear();
-        transactionsById.clear();
+    transactionsById.clear();
         allTransactions.clear();
     }
     
@@ -245,12 +205,6 @@ public class TransactionHistoryProjection implements EventProjection {
         return new HashMap<>(transactionsByAccount);
     }
     
-    /**
-     * Gets all transactions for a specific account.
-     * 
-     * @param accountId The ID of the account
-     * @return A list of transactions for the account, ordered by occurrence time
-     */
     public List<TransactionRecord> getTransactionsForAccount(String accountId) {
         List<TransactionRecord> transactions = transactionsByAccount.get(accountId);
         if (transactions == null) {
@@ -260,14 +214,6 @@ public class TransactionHistoryProjection implements EventProjection {
         return new ArrayList<>(transactions);
     }
     
-    /**
-     * Gets transactions for a specific account within a date range.
-     * 
-     * @param accountId The ID of the account
-     * @param fromDate The start date (inclusive)
-     * @param toDate The end date (inclusive)
-     * @return A list of transactions within the date range
-     */
     public List<TransactionRecord> getTransactionsForAccount(String accountId, Instant fromDate, Instant toDate) {
         return getTransactionsForAccount(accountId).stream()
             .filter(transaction -> !transaction.getOccurredAt().isBefore(fromDate) && 
@@ -275,35 +221,22 @@ public class TransactionHistoryProjection implements EventProjection {
             .collect(Collectors.toList());
     }
     
-    /**
-     * Gets a specific transaction by its ID.
-     * 
-     * @param transactionId The ID of the transaction
-     * @return The transaction record, or null if not found
-     */
     public TransactionRecord getTransactionById(String transactionId) {
-        return transactionsById.get(transactionId);
+        List<TransactionRecord> list = transactionsById.get(transactionId);
+        return (list == null || list.isEmpty()) ? null : list.get(0);
+    }
+
+    public List<TransactionRecord> getTransactionsById(String transactionId) {
+        List<TransactionRecord> list = transactionsById.get(transactionId);
+        return list == null ? Collections.emptyList() : new ArrayList<>(list);
     }
     
-    /**
-     * Gets all transactions of a specific type.
-     * 
-     * @param transactionType The type of transaction (e.g., "DEPOSIT", "WITHDRAWAL")
-     * @return A list of transactions of the specified type
-     */
     public List<TransactionRecord> getTransactionsByType(String transactionType) {
         return allTransactions.stream()
             .filter(transaction -> transactionType.equals(transaction.getTransactionType()))
             .collect(Collectors.toList());
     }
     
-    /**
-     * Gets all transactions within a date range.
-     * 
-     * @param fromDate The start date (inclusive)
-     * @param toDate The end date (inclusive)
-     * @return A list of transactions within the date range
-     */
     public List<TransactionRecord> getTransactionsInDateRange(Instant fromDate, Instant toDate) {
         return allTransactions.stream()
             .filter(transaction -> !transaction.getOccurredAt().isBefore(fromDate) && 
@@ -311,12 +244,6 @@ public class TransactionHistoryProjection implements EventProjection {
             .collect(Collectors.toList());
     }
     
-    /**
-     * Gets the total amount of deposits for a specific account.
-     * 
-     * @param accountId The ID of the account
-     * @return The total amount of deposits
-     */
     public BigDecimal getTotalDepositsForAccount(String accountId) {
         return getTransactionsForAccount(accountId).stream()
             .filter(transaction -> "DEPOSIT".equals(transaction.getTransactionType()))
@@ -324,12 +251,6 @@ public class TransactionHistoryProjection implements EventProjection {
             .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
     
-    /**
-     * Gets the total amount of withdrawals for a specific account.
-     * 
-     * @param accountId The ID of the account
-     * @return The total amount of withdrawals
-     */
     public BigDecimal getTotalWithdrawalsForAccount(String accountId) {
         return getTransactionsForAccount(accountId).stream()
             .filter(transaction -> "WITHDRAWAL".equals(transaction.getTransactionType()))
@@ -337,29 +258,17 @@ public class TransactionHistoryProjection implements EventProjection {
             .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
     
-    /**
-     * Gets the total number of transactions for a specific account.
-     * 
-     * @param accountId The ID of the account
-     * @return The total number of transactions
-     */
     public long getTransactionCountForAccount(String accountId) {
         List<TransactionRecord> transactions = transactionsByAccount.get(accountId);
         return transactions != null ? transactions.size() : 0;
     }
     
-    /**
-     * Gets the total number of transactions across all accounts.
-     * 
-     * @return The total number of transactions
-     */
     public long getTotalTransactionCount() {
         return allTransactions.size();
     }
     
     @Override
     public boolean isValid() {
-        // Basic validation: all transactions should have valid amounts
         return allTransactions.stream()
             .allMatch(transaction -> transaction.getAmount().compareTo(BigDecimal.ZERO) >= 0);
     }

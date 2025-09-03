@@ -44,7 +44,7 @@ public class EventSourcingTest {
     @Test
     void testAccountCreation() throws Exception {
         // Given
-        BankAccount account = new BankAccount("John Doe", "CHECKING", new BigDecimal("1000.00"), "USD");
+        BankAccount account = new BankAccount("John Doe", "CHECKING", new BigDecimal("1000.00"));
         
         // When
         saveAccount(account);
@@ -53,7 +53,6 @@ public class EventSourcingTest {
         assertThat(account.getAccountHolderName()).isEqualTo("John Doe");
         assertThat(account.getAccountType()).isEqualTo("CHECKING");
         assertThat(account.getBalance()).isEqualTo(new BigDecimal("1000.00"));
-        assertThat(account.getCurrency()).isEqualTo("USD");
         assertThat(account.isClosed()).isFalse();
         assertThat(account.getVersion()).isEqualTo(1);
         assertThat(account.getUncommittedEvents()).hasSize(0); // Events are committed after save
@@ -67,7 +66,7 @@ public class EventSourcingTest {
     @Test
     void testMoneyDeposit() throws Exception {
         // Given
-        BankAccount account = new BankAccount("John Doe", "CHECKING", new BigDecimal("1000.00"), "USD");
+        BankAccount account = new BankAccount("John Doe", "CHECKING", new BigDecimal("1000.00"));
         saveAccount(account);
         
         // When
@@ -89,7 +88,7 @@ public class EventSourcingTest {
     @Test
     void testMoneyWithdrawal() throws Exception {
         // Given
-        BankAccount account = new BankAccount("John Doe", "CHECKING", new BigDecimal("1000.00"), "USD");
+        BankAccount account = new BankAccount("John Doe", "CHECKING", new BigDecimal("1000.00"));
         saveAccount(account);
         
         // When
@@ -111,7 +110,7 @@ public class EventSourcingTest {
     @Test
     void testInsufficientFunds() throws Exception {
         // Given
-        BankAccount account = new BankAccount("John Doe", "CHECKING", new BigDecimal("1000.00"), "USD");
+        BankAccount account = new BankAccount("John Doe", "CHECKING", new BigDecimal("1000.00"));
         saveAccount(account);
         
         // When & Then
@@ -129,7 +128,7 @@ public class EventSourcingTest {
     @Test
     void testAccountClosure() throws Exception {
         // Given
-        BankAccount account = new BankAccount("John Doe", "CHECKING", new BigDecimal("1000.00"), "USD");
+        BankAccount account = new BankAccount("John Doe", "CHECKING", new BigDecimal("1000.00"));
         saveAccount(account);
         
         // When
@@ -151,7 +150,7 @@ public class EventSourcingTest {
     @Test
     void testEventReplay() throws Exception {
         // Given
-        BankAccount originalAccount = new BankAccount("John Doe", "CHECKING", new BigDecimal("1000.00"), "USD");
+        BankAccount originalAccount = new BankAccount("John Doe", "CHECKING", new BigDecimal("1000.00"));
         saveAccount(originalAccount);
         
         originalAccount.deposit(new BigDecimal("500.00"), "Salary", "John Doe");
@@ -169,7 +168,6 @@ public class EventSourcingTest {
         assertThat(reconstructedAccount.getAccountHolderName()).isEqualTo("John Doe");
         assertThat(reconstructedAccount.getAccountType()).isEqualTo("CHECKING");
         assertThat(reconstructedAccount.getBalance()).isEqualTo(new BigDecimal("1300.00"));
-        assertThat(reconstructedAccount.getCurrency()).isEqualTo("USD");
         assertThat(reconstructedAccount.isClosed()).isFalse();
         assertThat(reconstructedAccount.getVersion()).isEqualTo(3);
     }
@@ -177,7 +175,7 @@ public class EventSourcingTest {
     @Test
     void testConcurrencyControl() throws Exception {
         // Given
-        BankAccount account1 = new BankAccount("John Doe", "CHECKING", new BigDecimal("1000.00"), "USD");
+        BankAccount account1 = new BankAccount("John Doe", "CHECKING", new BigDecimal("1000.00"));
         saveAccount(account1);
         
         // Load the same account again (simulating concurrent access)
@@ -204,8 +202,8 @@ public class EventSourcingTest {
     @Test
     void testBalanceProjection() throws Exception {
         // Given
-        BankAccount account1 = new BankAccount("John Doe", "CHECKING", new BigDecimal("1000.00"), "USD");
-        BankAccount account2 = new BankAccount("Jane Smith", "SAVINGS", new BigDecimal("5000.00"), "USD");
+        BankAccount account1 = new BankAccount("John Doe", "CHECKING", new BigDecimal("1000.00"));
+        BankAccount account2 = new BankAccount("Jane Smith", "SAVINGS", new BigDecimal("5000.00"));
         
         saveAccount(account1);
         saveAccount(account2);
@@ -235,7 +233,7 @@ public class EventSourcingTest {
     @Test
     void testTransactionHistoryProjection() throws Exception {
         // Given
-        BankAccount account = new BankAccount("John Doe", "CHECKING", new BigDecimal("1000.00"), "USD");
+        BankAccount account = new BankAccount("John Doe", "CHECKING", new BigDecimal("1000.00"));
         saveAccount(account);
         
         String depositId = account.deposit(new BigDecimal("500.00"), "Salary", "John Doe");
@@ -268,8 +266,8 @@ public class EventSourcingTest {
     @Test
     void testEventStoreStatistics() throws Exception {
         // Given
-        BankAccount account1 = new BankAccount("John Doe", "CHECKING", new BigDecimal("1000.00"), "USD");
-        BankAccount account2 = new BankAccount("Jane Smith", "SAVINGS", new BigDecimal("5000.00"), "USD");
+        BankAccount account1 = new BankAccount("John Doe", "CHECKING", new BigDecimal("1000.00"));
+        BankAccount account2 = new BankAccount("Jane Smith", "SAVINGS", new BigDecimal("5000.00"));
         
         saveAccount(account1);
         saveAccount(account2);
@@ -295,7 +293,7 @@ public class EventSourcingTest {
     @Test
     void testTemporalQueries() throws Exception {
         // Given
-        BankAccount account = new BankAccount("John Doe", "CHECKING", new BigDecimal("1000.00"), "USD");
+        BankAccount account = new BankAccount("John Doe", "CHECKING", new BigDecimal("1000.00"));
         saveAccount(account);
         
         Thread.sleep(100); // Ensure different timestamps
@@ -321,7 +319,7 @@ public class EventSourcingTest {
     @Test
     void testProjectionReset() throws Exception {
         // Given
-        BankAccount account = new BankAccount("John Doe", "CHECKING", new BigDecimal("1000.00"), "USD");
+        BankAccount account = new BankAccount("John Doe", "CHECKING", new BigDecimal("1000.00"));
         saveAccount(account);
         updateProjections();
         
@@ -340,7 +338,7 @@ public class EventSourcingTest {
     @Test
     void testInvalidOperations() throws Exception {
         // Given
-        BankAccount account = new BankAccount("John Doe", "CHECKING", new BigDecimal("1000.00"), "USD");
+        BankAccount account = new BankAccount("John Doe", "CHECKING", new BigDecimal("1000.00"));
         saveAccount(account);
         
         // When & Then - Try to deposit negative amount

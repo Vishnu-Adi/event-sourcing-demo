@@ -95,14 +95,14 @@ public class EventSourcingBenefitsDemo {
      */
     private void createComplexScenario() throws Exception {
         // Create accounts at different times
-        BankAccount account1 = new BankAccount("Alice Johnson", "CHECKING", new BigDecimal("1000.00"), "USD");
+    BankAccount account1 = new BankAccount("Alice Johnson", "CHECKING", new BigDecimal("1000.00"));
         saveAccount(account1);
         System.out.println("Created account for Alice Johnson: " + account1);
         
         // Wait a bit to simulate time passing
         Thread.sleep(100);
         
-        BankAccount account2 = new BankAccount("Bob Smith", "SAVINGS", new BigDecimal("5000.00"), "USD");
+    BankAccount account2 = new BankAccount("Bob Smith", "SAVINGS", new BigDecimal("5000.00"));
         saveAccount(account2);
         System.out.println("Created account for Bob Smith: " + account2);
         
@@ -110,27 +110,27 @@ public class EventSourcingBenefitsDemo {
         Thread.sleep(100);
         account1.deposit(new BigDecimal("500.00"), "Salary deposit", "Alice Johnson");
         saveAccount(account1);
-        System.out.println("Alice deposited $500.00");
+    System.out.println("Alice deposited INR 500.00");
         
         Thread.sleep(100);
         account2.withdraw(new BigDecimal("1000.00"), "Emergency fund", "Bob Smith");
         saveAccount(account2);
-        System.out.println("Bob withdrew $1000.00");
+    System.out.println("Bob withdrew INR 1000.00");
         
         Thread.sleep(100);
         account1.withdraw(new BigDecimal("200.00"), "Grocery shopping", "Alice Johnson");
         saveAccount(account1);
-        System.out.println("Alice withdrew $200.00");
+    System.out.println("Alice withdrew INR 200.00");
         
         Thread.sleep(100);
         account2.deposit(new BigDecimal("2500.00"), "Investment return", "Bob Smith");
         saveAccount(account2);
-        System.out.println("Bob deposited $2500.00");
+    System.out.println("Bob deposited INR 2500.00");
         
         Thread.sleep(100);
         account1.deposit(new BigDecimal("100.00"), "Cashback reward", "Alice Johnson");
         saveAccount(account1);
-        System.out.println("Alice deposited $100.00");
+    System.out.println("Alice deposited INR 100.00");
         
         // Update projections
         updateProjections();
@@ -219,27 +219,26 @@ public class EventSourcingBenefitsDemo {
         BankAccount reconstructedAccount = new BankAccount(accountId, accountEvents);
         System.out.println("Final reconstructed state: " + reconstructedAccount);
         
-        // Show how state evolves with each event
+        // Show how state evolves with each event using actual amounts
         System.out.println("\nState evolution with each event:");
         BigDecimal runningBalance = BigDecimal.ZERO;
         for (int i = 0; i < accountEvents.size(); i++) {
             DomainEvent event = accountEvents.get(i);
             System.out.println(String.format("Event %d: %s", i + 1, event.getEventType()));
-            
-            // Simulate state update based on event type
             switch (event.getEventType()) {
                 case "AccountOpened":
-                    runningBalance = new BigDecimal("1000.00");
+                    runningBalance = ((com.example.eventsourcing.domain.account.AccountOpened) event).getInitialBalance();
                     break;
                 case "MoneyDeposited":
-                    runningBalance = runningBalance.add(new BigDecimal("500.00"));
+                    runningBalance = ((com.example.eventsourcing.domain.account.MoneyDeposited) event).getNewBalance();
                     break;
                 case "MoneyWithdrawn":
-                    runningBalance = runningBalance.subtract(new BigDecimal("200.00"));
+                    runningBalance = ((com.example.eventsourcing.domain.account.MoneyWithdrawn) event).getNewBalance();
+                    break;
+                default:
                     break;
             }
-            
-            System.out.println("  Balance after this event: $" + runningBalance);
+            System.out.println("  Balance after this event: INR " + runningBalance);
         }
         
         System.out.println("\nKey Benefits:");
