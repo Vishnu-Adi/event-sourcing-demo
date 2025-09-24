@@ -1,5 +1,4 @@
 /Users/vishnuadithya/Documents/cloud/event-sourcing-demo/src/main/java/com/example/eventsourcing/domain/account/BankAccount.java
-/Users/vishnuadithya/Documents/cloud/event-sourcing-demo/src/main/java/com/example/eventsourcing/core/ConcurrencyException.java
 /Users/vishnuadithya/Documents/cloud/event-sourcing-demo/src/main/java/com/example/eventsourcing/core/AbstractDomainEvent.java
 /Users/vishnuadithya/Documents/cloud/event-sourcing-demo/src/main/java/com/example/eventsourcing/store/InMemoryEventStore.java
 /Users/vishnuadithya/Documents/cloud/event-sourcing-demo/src/main/java/com/example/eventsourcing/projection/TransactionHistoryProjection.java

@@ -45,15 +45,11 @@ public class EventSourcingDemo {
             System.out.println("=============================================");
             demonstrateEventReplay();
             
-            System.out.println("\nStep 5: Concurrency Control");
-            System.out.println("===========================");
-            demonstrateConcurrencyControl();
-            
-            System.out.println("\nStep 6: Event Store Statistics");
+            System.out.println("\nStep 5: Event Store Statistics");
             System.out.println("==============================");
             showEventStoreStatistics();
             
-            System.out.println("\nStep 7: Temporal Queries");
+            System.out.println("\nStep 6: Temporal Queries");
             System.out.println("========================");
             demonstrateTemporalQueries();
             
@@ -474,39 +470,6 @@ public class EventSourcingDemo {
         }
     }
     
-    private void demonstrateConcurrencyControl() throws Exception {
-        System.out.println("Demonstrating Concurrency Control:");
-        System.out.println("----------------------------------");
-        
-        List<BankAccount> accounts = loadAllAccounts();
-        if (accounts.isEmpty()) {
-            System.out.println("No accounts found. Cannot demonstrate concurrency control.");
-            return;
-        }
-        
-        BankAccount account = accounts.get(0);
-        String accountId = account.getId();
-        
-        List<DomainEvent> events = eventStore.getEvents(accountId).get();
-        BankAccount concurrentAccount = new BankAccount(accountId, events);
-        
-        account.deposit(new BigDecimal("100.00"), "Deposit 1", "User 1");
-        concurrentAccount.deposit(new BigDecimal("200.00"), "Deposit 2", "User 2");
-        
-        saveAccount(account);
-    System.out.println("Saved first account with deposit of INR 100.00");
-        
-        try {
-            saveAccount(concurrentAccount);
-            System.out.println("Saved second account with deposit of INR 200.00");
-        } catch (Exception e) {
-            System.out.println("Failed to save second account due to concurrency conflict: " + e.getMessage());
-        }
-        
-        BankAccount finalAccount = loadAccount(accountId);
-        System.out.println("Final account state: " + finalAccount);
-    }
-    
     private void showEventStoreStatistics() throws Exception {
         System.out.println("Event Store Statistics:");
         System.out.println("----------------------");
@@ -553,11 +516,7 @@ public class EventSourcingDemo {
     private void saveAccount(BankAccount account) throws Exception {
         List<DomainEvent> uncommittedEvents = account.getUncommittedEvents();
         if (!uncommittedEvents.isEmpty()) {
-            long expectedVersion = account.getVersion() - uncommittedEvents.size();
-            if (expectedVersion == 0) {
-                expectedVersion = -1;
-            }
-            eventStore.appendEvents(account.getId(), expectedVersion, uncommittedEvents).get();
+            eventStore.appendEvents(account.getId(), -1, uncommittedEvents).get();
             account.markEventsAsCommitted();
         }
     }

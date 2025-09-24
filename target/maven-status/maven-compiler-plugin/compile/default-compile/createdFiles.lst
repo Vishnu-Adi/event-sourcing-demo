@@ -2,7 +2,6 @@ com/example/eventsourcing/projection/AccountBalanceProjection.class
 com/example/eventsourcing/projection/AccountBalanceProjection$AccountBalance.class
 com/example/eventsourcing/store/InMemoryEventStore.class
 com/example/eventsourcing/domain/account/MoneyWithdrawn.class
-com/example/eventsourcing/core/ConcurrencyException.class
 com/example/eventsourcing/core/EventStore.class
 com/example/eventsourcing/store/InMemoryEventStore$StoredEvent.class
 com/example/eventsourcing/core/AggregateRoot.class

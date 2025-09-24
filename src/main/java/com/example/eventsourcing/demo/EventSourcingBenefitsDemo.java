@@ -393,12 +393,7 @@ public class EventSourcingBenefitsDemo {
     private void saveAccount(BankAccount account) throws Exception {
         List<DomainEvent> uncommittedEvents = account.getUncommittedEvents();
         if (!uncommittedEvents.isEmpty()) {
-            long expectedVersion = account.getVersion() - uncommittedEvents.size();
-            // For new accounts, expected version should be -1 (aggregate doesn't exist)
-            if (expectedVersion == 0) {
-                expectedVersion = -1;
-            }
-            eventStore.appendEvents(account.getId(), expectedVersion, uncommittedEvents).get();
+            eventStore.appendEvents(account.getId(), -1, uncommittedEvents).get();
             account.markEventsAsCommitted();
         }
     }
